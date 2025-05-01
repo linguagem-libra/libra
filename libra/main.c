@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "valor.h"
+#include "erro.h"
 
 int main(void)
 {
@@ -8,4 +9,7 @@ int main(void)
     
     libra_exibir_valor(nulo);
     libra_exibir_valor(num);
+
+    libra_erro("oops\n");
+    printf("teste\n");
 }
