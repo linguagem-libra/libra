@@ -4,6 +4,6 @@
 
 void libra_erro(char* msg)
 {
-    printf("%s", msg);
+    printf("Erro: %s", msg);
     exit(1);
 }
