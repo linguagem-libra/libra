@@ -1,15 +1,16 @@
 #include <stdio.h>
 #include "valor.h"
 #include "erro.h"
+#include "token.h"
+#include "tokenizador.h"
 
 int main(void)
 {
-    LibraValor nulo = libra_nulo();
-    LibraValor num = libra_numero(42);
-    
-    libra_exibir_valor(nulo);
-    libra_exibir_valor(num);
+    Tokenizador tokenizador = { "69 420", 0 };
 
-    libra_erro("oops\n");
-    printf("teste\n");
+    Token token;
+    do {
+        token = tokenizador_proximo_token(&tokenizador);
+        exibir_token(token);
+    } while (token.tipo != TOKEN_FIM_ARQ);
 }
