@@ -32,20 +32,24 @@ static Expr* parse_expr_lit(Parser* parser)
 }
 
 
-static int prec_operador(Token token) {
-    switch (token.tipo) {
+static int prec_operador(Token token)
+{
+    switch (token.tipo)
+    {
         case TOKEN_OP_MUL:
         case TOKEN_OP_DIV:      return 1;
         case TOKEN_OP_SOMA:
         case TOKEN_OP_SUB:      return 0;
-        default:                return -999; // It is not an operator
+        default:                return -999; // Não é um operador
     }
 }
 
-static Expr* parse_expr(Parser* parser, int prec_min) {
+static Expr* parse_expr(Parser* parser, int prec_min)
+{
     Expr* esq = parse_expr_lit(parser);
     
-    while (1) {
+    while (1)
+    {
         if (fim_arq(parser) || prec_operador(prox(parser)) < prec_min)
             break;
 

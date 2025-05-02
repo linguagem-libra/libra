@@ -14,7 +14,8 @@ Expr* libra_expr_lit(LibraValor valor)
 
 Expr* libra_expr_bin(Expr* esq, TokenTipo op, Expr* dir)
 {
-    if (!esq || !dir) {
+    if (!esq || !dir)
+    {
         libra_erro("Operandos inválidos para Expr binária (esq ou dir é NULL)");
     }
 

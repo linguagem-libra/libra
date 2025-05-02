@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include "vm.h"
 
-void libra_vm_iniciar(LibraVM* vm, const size_t tam_pilha) {
+void libra_vm_iniciar(LibraVM* vm, const size_t tam_pilha)
+{
     vm->tam_pilha = tam_pilha;
     vm->sp = 0;
     vm->pc = 0;
@@ -11,58 +12,123 @@ void libra_vm_iniciar(LibraVM* vm, const size_t tam_pilha) {
     vm->tam_cod = 0;
 }
 
-void libra_vm_carregar_prog(LibraVM* vm, int* codigo, const size_t tam_cod) {
+void libra_vm_carregar_prog(LibraVM* vm, int* codigo, const size_t tam_cod)
+{
     vm->codigo = codigo;
     vm->tam_cod = tam_cod;
     vm->pc = 0;
 }
 
-void libra_vm_limpar(LibraVM* vm) {
+void libra_vm_salvar_bytecode(const char* nome_arquivo, int* codigo, size_t tam_cod)
+{
+    FILE* arquivo = fopen(nome_arquivo, "wb");
+    if (!arquivo)
+    {
+        libra_erro("Não foi possível ler o arquivo");
+    }
+
+    if (fwrite(codigo, sizeof(int), tam_cod, arquivo) != tam_cod)
+    {
+        fclose(arquivo);
+        libra_erro("Não foi possível escrever bytecode no arquivo");
+    }
+
+    fclose(arquivo);
+}
+
+int* libra_vm_carregar_bytecode(const char* nome_arquivo, size_t* tam_cod)
+{
+    FILE* arquivo = fopen(nome_arquivo, "rb");
+    if (!arquivo)
+    {
+        libra_erro("Não foi possível ler o arquivo");
+    }
+
+    fseek(arquivo, 0, SEEK_END);
+    size_t tamanho_arquivo = ftell(arquivo);
+    rewind(arquivo);
+
+    if (tamanho_arquivo % sizeof(int) != 0)
+    {
+        fclose(arquivo);
+        libra_erro("Arquivo inválido");
+        exit(EXIT_FAILURE);
+    }
+
+    *tam_cod = tamanho_arquivo / sizeof(int);
+    int* codigo = (int*)libra_alocar(tamanho_arquivo);
+    
+    if (fread(codigo, sizeof(int), *tam_cod, arquivo) != *tam_cod)
+    {
+        fclose(arquivo);
+        libra_erro("Erro ao ler bytecode do arquivo");
+        libra_liberar(codigo);
+    }
+
+    fclose(arquivo);
+    return codigo;
+}
+
+void libra_vm_limpar(LibraVM* vm)
+{
     libra_liberar(vm->pilha);
 }
 
-int libra_vm_proximo_byte(LibraVM* vm) {
-    if (vm->pc >= vm->tam_cod) {
+int libra_vm_proximo_byte(LibraVM* vm)
+{
+    if (vm->pc >= vm->tam_cod)
+    {
         return -1;
     }
     return vm->codigo[vm->pc++];
 }
 
-int libra_vm_topo_pilha(LibraVM* vm) {
-    if (vm->sp == 0) {
+int libra_vm_topo_pilha(LibraVM* vm)
+{
+    if (vm->sp == 0)
+    {
         libra_erro("Pilha vazia\n");
     }
     return vm->pilha[vm->sp - 1];
 }
 
-int libra_vm_pilha_cheia(LibraVM* vm) {
+int libra_vm_pilha_cheia(LibraVM* vm)
+{
     return vm->sp == vm->tam_pilha;
 }
 
-int libra_vm_pilha_vazia(LibraVM* vm) {
+int libra_vm_pilha_vazia(LibraVM* vm)
+{
     return vm->sp == 0;
 }
 
-void libra_vm_empilhar(LibraVM* vm, int valor) {
-    if (libra_vm_pilha_cheia(vm)) {
+void libra_vm_empilhar(LibraVM* vm, int valor)
+{
+    if (libra_vm_pilha_cheia(vm))
+    {
         libra_erro("Pilha cheia\n");
     }
     vm->pilha[vm->sp++] = valor;
 }
 
-int libra_vm_desempilhar(LibraVM* vm) {
-    if (libra_vm_pilha_vazia(vm)) {
+int libra_vm_desempilhar(LibraVM* vm)
+{
+    if (libra_vm_pilha_vazia(vm))
+    {
         libra_erro("Pilha vazia\n");
     }
     return vm->pilha[--vm->sp];
 }
 
-void libra_vm_executar(LibraVM* vm) {
+void libra_vm_executar(LibraVM* vm)
+{
     int instrucao;
     int a, b;
 
-    while ((instrucao = libra_vm_proximo_byte(vm)) != -1) {
-        switch (instrucao) {
+    while ((instrucao = libra_vm_proximo_byte(vm)) != -1)
+    {
+        switch (instrucao)
+        {
             case OP_PARAR:
                 return;
 
@@ -76,7 +142,8 @@ void libra_vm_executar(LibraVM* vm) {
                 break;
 
             case OP_SOMAR:
-                if (libra_vm_pilha_vazia(vm)) {
+                if (libra_vm_pilha_vazia(vm))
+                {
                     libra_erro("Pilha vazia para soma\n");
                 }
                 b = libra_vm_desempilhar(vm);
@@ -85,7 +152,8 @@ void libra_vm_executar(LibraVM* vm) {
                 break;
 
             case OP_SUBTRAIR:
-                if (libra_vm_pilha_vazia(vm)) {
+                if (libra_vm_pilha_vazia(vm))
+                {
                     libra_erro("Pilha vazia para subtração\n");
                 }
                 b = libra_vm_desempilhar(vm);
@@ -94,7 +162,8 @@ void libra_vm_executar(LibraVM* vm) {
                 break;
 
             case OP_MULTIPLICAR:
-                if (libra_vm_pilha_vazia(vm)) {
+                if (libra_vm_pilha_vazia(vm))
+                {
                     libra_erro("Pilha vazia para multiplicação\n");
                 }
                 b = libra_vm_desempilhar(vm);
@@ -111,5 +180,20 @@ void libra_vm_executar(LibraVM* vm) {
                 libra_erro("Instrução desconhecida");
                 return;
         }
+    }
+}
+
+const char* libra_nome_instrucao(int op)
+{
+    switch (op)
+    {
+        case OP_PARAR: return "PARAR";
+        case OP_EMPILHAR: return "EMPILHAR";
+        case OP_DESEMPILHAR: return "DESEMPILHAR";
+        case OP_SOMAR: return "SOMAR";
+        case OP_SUBTRAIR: return "SUBTRAIR";
+        case OP_MULTIPLICAR: return "MULTIPLICAR";
+        case OP_EXIBIR: return "EXIBIR";
+        default: return NULL;
     }
 }

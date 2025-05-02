@@ -9,6 +9,45 @@ static Nodo* gerar_nodos(const Token* tokens, size_t* saida_quantidade);
 static int* gerar_instrucoes_vm(const Nodo* nodos, size_t n_qtd, size_t* saida_quantidade);
 static void libra_liberar_expr(Expr* expr);
 
+void libra_compilar(const char* codigo, const char* arquivo_saida) {
+    size_t t_qtd;
+    Token* tokens = gerar_tokens(codigo, &t_qtd);
+
+    size_t n_qtd;
+    Nodo* nodos = gerar_nodos(tokens, &n_qtd);
+
+    size_t i_qtd;
+    int* instrucoes = gerar_instrucoes_vm(nodos, n_qtd, &i_qtd);
+
+    // Salvar as instruções no arquivo de saída
+    libra_vm_salvar_bytecode(arquivo_saida, instrucoes, i_qtd);
+
+    // Limpar memória alocada
+    for (size_t i = 0; i < n_qtd; i++) {
+        if (nodos[i].tipo == NODO_EXPR) {
+            Expr* expr = nodos[i].expr;
+            libra_liberar_expr(expr);
+        }
+    }
+
+    libra_liberar(tokens);
+    libra_liberar(nodos);
+}
+
+void libra_carregar(const char* arquivo_entrada) {
+    size_t tam_cod;
+    int* codigo = libra_vm_carregar_bytecode(arquivo_entrada, &tam_cod);
+
+    LibraVM vm;
+    libra_vm_iniciar(&vm, 1000);
+    libra_vm_carregar_prog(&vm, codigo, tam_cod);
+    libra_vm_executar(&vm);
+    printf("%d\n", libra_vm_topo_pilha(&vm));
+
+    libra_vm_limpar(&vm);
+    libra_liberar(codigo);
+}
+
 void libra_executar(const char* codigo)
 {
     size_t t_qtd;
@@ -25,6 +64,7 @@ void libra_executar(const char* codigo)
     libra_vm_carregar_prog(&vm, instrucoes, i_qtd);
     libra_vm_executar(&vm);
     printf("%d\n", libra_vm_topo_pilha(&vm));
+
     libra_vm_limpar(&vm);
 
     for (size_t i = 0; i < n_qtd; i++)

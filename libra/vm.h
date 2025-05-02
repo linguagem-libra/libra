@@ -35,5 +35,8 @@ int libra_vm_proximo_byte(LibraVM* vm);
 int libra_vm_topo_pilha(LibraVM* vm);
 int libra_vm_pilha_cheia(LibraVM* vm);
 int libra_vm_pilha_vazia(LibraVM* vm);
+const char* libra_nome_instrucao(int op);
+void libra_vm_salvar_bytecode(const char* nome_arquivo, int* codigo, size_t tam_cod);
+int* libra_vm_carregar_bytecode(const char* nome_arquivo, size_t* tam_cod);
 
 #endif // L_VM_H

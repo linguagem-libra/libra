@@ -23,7 +23,8 @@ typedef enum TokenTipo
 typedef struct Token
 {
     TokenTipo tipo;
-    union {
+    union
+    {
         int num;
     } valor;
 } Token;
