@@ -9,7 +9,7 @@ void libra_exibir_valor(LibraValor valor)
         printf("nulo\n");
         break;
     case LIBRA_NUMERO:
-        printf("%d\n", valor.valor.i32);
+        printf("%d\n", valor.i32);
         break;
     }
 }

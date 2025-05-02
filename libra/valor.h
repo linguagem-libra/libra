@@ -2,7 +2,7 @@
 #define L_VALOR_H
 
 #define libra_nulo() (LibraValor) { .tipo = LIBRA_NULO }
-#define libra_numero(n) (LibraValor) { .tipo = LIBRA_NUMERO, .valor.i32 = (n) }
+#define libra_num(n) (LibraValor) { .tipo = LIBRA_NUMERO, .i32 = (n) }
 
 typedef enum
 {
@@ -16,7 +16,7 @@ typedef struct
     union
     {
         int i32;
-    } valor;
+    };
     
 } LibraValor;
 
