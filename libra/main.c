@@ -6,7 +6,7 @@
 
 int main(void)
 {
-    Tokenizador tokenizador = { "69 420", 0 };
+    Tokenizador tokenizador = { "69 + 420", 0 };
 
     Token token;
     do {

@@ -42,6 +42,16 @@ Token tokenizador_proximo_token(Tokenizador* tokenizador)
         }
         return libra_token_num(valor);
     }
+
+    switch (prox(tokenizador))
+    {
+    case '+': passar(tokenizador); return libra_token_op_soma();
+    case '-': passar(tokenizador); return libra_token_op_sub();
+    case '*': passar(tokenizador); return libra_token_op_mul();
+    case '/': passar(tokenizador); return libra_token_op_div();
+    }
+
+    return libra_token_invalido();
 }
 
 void exibir_token(Token token)
@@ -50,5 +60,10 @@ void exibir_token(Token token)
     {
         case TOKEN_NUM_LIT: printf("NUM_LIT(%d)\n", token.valor.num); break;
         case TOKEN_FIM_ARQ: printf("FIM_ARQ\n"); break;
+        case TOKEN_INVALIDO: printf("INVALIDO\n"); break;
+        case TOKEN_OP_SOMA: printf("OP_SOMA\n"); break;
+        case TOKEN_OP_SUB: printf("OP_SUB\n"); break;
+        case TOKEN_OP_MUL: printf("OP_MUL\n"); break;
+        case TOKEN_OP_DIV: printf("OP_DIV\n"); break;
     }
 }
