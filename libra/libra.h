@@ -8,6 +8,7 @@
 #include "arvore.h"
 #include "memoria.h"
 #include "parser.h"
+#include "vm.h"
 
 void libra_executar(const char* codigo);
 LibraValor libra_avaliar_expr(const Expr* expr);

@@ -6,6 +6,7 @@
 
 static Token* gerar_tokens(const char* codigo, size_t* saida_quantidade);
 static Nodo* gerar_nodos(const Token* tokens, size_t* saida_quantidade);
+static int* gerar_instrucoes_vm(const Nodo* nodos, size_t n_qtd, size_t* saida_quantidade);
 static void libra_liberar_expr(Expr* expr);
 
 void libra_executar(const char* codigo)
@@ -16,14 +17,15 @@ void libra_executar(const char* codigo)
     size_t n_qtd;
     Nodo* nodos = gerar_nodos(tokens, &n_qtd);
     
-    for (size_t i = 0; i < n_qtd; i++)
-    {
-        if(nodos[i].tipo == NODO_EXPR)
-        {
-            LibraValor valor = libra_avaliar_expr(nodos[i].expr);
-            libra_exibir_valor(valor);
-        }
-    }
+    size_t i_qtd;
+    int* instrucoes = gerar_instrucoes_vm(nodos, n_qtd, &i_qtd);
+
+    LibraVM vm;
+    libra_vm_iniciar(&vm, 1000);
+    libra_vm_carregar_prog(&vm, instrucoes, i_qtd);
+    libra_vm_executar(&vm);
+    printf("%d\n", libra_vm_topo_pilha(&vm));
+    libra_vm_limpar(&vm);
 
     for (size_t i = 0; i < n_qtd; i++)
     {
@@ -82,6 +84,77 @@ LibraValor libra_avaliar_expr(const Expr* expr)
     libra_erro("expr->tipo inválido");
 }
 
+static int* gerar_instrucoes_vm(const Nodo* nodos, size_t n_qtd, size_t* saida_quantidade)
+{
+    size_t capacidade = CAPACIDADE_INICIAL_TOKENS;
+    size_t quantidade = 0;
+    int* instrucoes = libra_alocar(capacidade * sizeof(int));
+
+    for (size_t i = 0; i < n_qtd; i++)
+    {
+        const Nodo* nodo = &nodos[i];
+        if (nodo->tipo == NODO_EXPR)
+        {
+            Expr* expr = nodo->expr;
+            if (expr->tipo == EXPR_LIT)
+            {
+                // Instrução de empilhar o valor literal
+                if (quantidade + 2 >= capacidade) // Precisamos de dois elementos: OP e valor
+                {
+                    capacidade *= 2;
+                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
+                }
+
+                instrucoes[quantidade++] = OP_EMPILHAR;  // Tipo de operação
+                instrucoes[quantidade++] = expr->lit.valor.i32; // Valor da literal
+            }
+            else if (expr->tipo == EXPR_BIN)
+            {
+                // Gerar instruções para expressões binárias
+                // Empilhar operando esquerdo
+                int esq_valor = libra_avaliar_expr(expr->bin.esq).i32;
+                if (quantidade + 2 >= capacidade)
+                {
+                    capacidade *= 2;
+                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
+                }
+                instrucoes[quantidade++] = OP_EMPILHAR;
+                instrucoes[quantidade++] = esq_valor;
+
+                // Empilhar operando direito
+                int dir_valor = libra_avaliar_expr(expr->bin.dir).i32;
+                if (quantidade + 2 >= capacidade)
+                {
+                    capacidade *= 2;
+                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
+                }
+                instrucoes[quantidade++] = OP_EMPILHAR;
+                instrucoes[quantidade++] = dir_valor;
+
+                // Instrução de operação binária
+                int op;
+                switch (expr->bin.op)
+                {
+                    case TOKEN_OP_SOMA: op = OP_SOMAR; break;
+                    case TOKEN_OP_SUB: op = OP_SUBTRAIR; break;
+                    case TOKEN_OP_MUL: op = OP_MULTIPLICAR; break;
+                    //case TOKEN_OP_DIV: op = OP_DIVIDIR; break;
+                    default: continue;  // Ignora operações desconhecidas
+                }
+
+                if (quantidade + 1 >= capacidade)
+                {
+                    capacidade *= 2;
+                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
+                }
+                instrucoes[quantidade++] = op;
+            }
+        }
+    }
+
+    *saida_quantidade = quantidade;
+    return instrucoes;
+}
 
 static Nodo* gerar_nodos(const Token* tokens, size_t* saida_quantidade)
 {
