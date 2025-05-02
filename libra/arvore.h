@@ -15,8 +15,8 @@ typedef enum
 
 typedef enum
 {
-    EXPR_LIT = 42,
-    EXPR_BIN = 69
+    EXPR_LIT,
+    EXPR_BIN
 } ExprTipo;
 
 typedef struct

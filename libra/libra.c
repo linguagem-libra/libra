@@ -6,6 +6,7 @@
 
 static Token* gerar_tokens(const char* codigo, size_t* saida_quantidade);
 static Nodo* gerar_nodos(const Token* tokens, size_t* saida_quantidade);
+static void libra_liberar_expr(Expr* expr);
 
 void libra_executar(const char* codigo)
 {
@@ -23,6 +24,29 @@ void libra_executar(const char* codigo)
             libra_exibir_valor(valor);
         }
     }
+
+    for (size_t i = 0; i < n_qtd; i++)
+    {
+        if(nodos[i].tipo == NODO_EXPR)
+        {
+            Expr* expr = nodos[i].expr;
+            libra_liberar_expr(expr);
+        }
+    }
+
+    libra_liberar(tokens);
+    libra_liberar(nodos);
+}
+
+static void libra_liberar_expr(Expr* expr)
+{
+    if(expr->tipo == EXPR_BIN)
+    {
+        libra_liberar_expr(expr->bin.esq);
+        libra_liberar_expr(expr->bin.dir);
+    }
+
+    libra_liberar(expr);
 }
 
 LibraValor libra_avaliar_expr(const Expr* expr)
