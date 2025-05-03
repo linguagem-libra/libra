@@ -24,7 +24,7 @@ void libra_copiar_mem(void* destino, void* origem, size_t num_bytes)
   memcpy(destino, origem, num_bytes);
 }
 
-void libra_liberar(void *ptr)
+void libra_liberar(void* ptr)
 {
   libra_alocacoes--;
   free(ptr);

@@ -1,6 +1,7 @@
 #ifndef LIBRA_H
 #define LIBRA_H
 
+#include <stddef.h>
 #include "valor.h"
 #include "erro.h"
 #include "token.h"
@@ -10,6 +11,7 @@
 #include "parser.h"
 #include "vm.h"
 #include "assembler.h"
+#include "compilador.h"
 
 void libra_executar(const char* codigo);
 LibraValor libra_avaliar_expr(const Expr* expr);

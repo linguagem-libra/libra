@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "vm.h"
 
+#define DEBUG_VM 0
+
 void libra_vm_iniciar(LibraVM* vm, const size_t tam_pilha)
 {
     vm->tam_pilha = tam_pilha;
@@ -18,6 +20,43 @@ void libra_vm_carregar_prog(LibraVM* vm, int* codigo, const size_t tam_cod)
     vm->tam_cod = tam_cod;
     vm->pc = 0;
 }
+
+void libra_vm_exibir_estado(const LibraVM* vm)
+{
+    printf("\n===== Estado da LVM =====\n");
+    printf("PC: %zu\n", vm->pc);
+    printf("SP: %zu\n", vm->sp);
+
+    printf("Pilha:\n");
+    if (vm->sp == 0)
+    {
+        printf("  [Vazia]\n");
+    }
+    else
+    {
+        for (size_t i = 0; i < vm->sp; i++)
+        {
+            printf("  [%zu]: %d\n", i, vm->pilha[i]);
+        }
+    }
+
+    printf("Código Carregado:\n");
+    for (size_t i = 0; i < vm->tam_cod; i++)
+    {
+        const char* nome_instrucao = libra_nome_instrucao(vm->codigo[i]);
+        if (nome_instrucao)
+        {
+            printf("  [%zu]: %s (%d)\n", i, nome_instrucao, vm->codigo[i]);
+        }
+        else
+        {
+            printf("  [%zu]: %d (Desconhecido)\n", i, vm->codigo[i]);
+        }
+    }
+
+    printf("=====================================\n");
+}
+
 
 void libra_vm_salvar_bytecode(const char* nome_arquivo, int* codigo, size_t tam_cod)
 {
@@ -72,6 +111,7 @@ int* libra_vm_carregar_bytecode(const char* nome_arquivo, size_t* tam_cod)
 void libra_vm_limpar(LibraVM* vm)
 {
     libra_liberar(vm->pilha);
+    libra_liberar(vm->codigo);
 }
 
 int libra_vm_proximo_byte(LibraVM* vm)
@@ -127,6 +167,9 @@ void libra_vm_executar(LibraVM* vm)
 
     while ((instrucao = libra_vm_proximo_byte(vm)) != -1)
     {
+        if(DEBUG_VM)
+            libra_vm_exibir_estado(vm);
+
         switch (instrucao)
         {
             case OP_PARAR:

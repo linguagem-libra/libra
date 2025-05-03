@@ -12,6 +12,22 @@ Expr* libra_expr_lit(LibraValor valor)
     return expr;
 }
 
+Expr* libra_expr_ident(char* nome)
+{
+    Expr* expr = libra_alocar(sizeof(Expr));
+
+    expr->tipo = EXPR_IDENT;
+    expr->ident.nome = nome;
+    return expr;
+}
+
+Nodo libra_decl_var(char* ident, Expr* expr)
+{
+    DeclVar decl;
+    decl.ident = ident;
+    return (Nodo) {.tipo = NODO_DECL_VAR, .decl_var = decl };
+}
+
 Expr* libra_expr_bin(Expr* esq, TokenTipo op, Expr* dir)
 {
     if (!esq || !dir)

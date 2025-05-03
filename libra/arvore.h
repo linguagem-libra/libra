@@ -10,12 +10,14 @@ typedef struct expr Expr;
 typedef enum
 {
     NODO_FINAL,
+    NODO_DECL_VAR,
     NODO_EXPR
 } NodoTipo; 
 
 typedef enum
 {
     EXPR_LIT,
+    EXPR_IDENT,
     EXPR_BIN
 } ExprTipo;
 
@@ -23,6 +25,11 @@ typedef struct
 {
     LibraValor valor;
 } ExprLit;
+
+typedef struct
+{
+    char* nome;
+} ExprIdent;
 
 typedef struct
 {
@@ -37,10 +44,17 @@ typedef struct expr
     union
     {
         ExprLit lit;
+        ExprIdent ident;
         ExprBin bin;
     };
     
 } Expr;
+
+typedef struct
+{
+    char* ident;
+    Expr* expr;
+} DeclVar;
 
 typedef struct nodo
 {
@@ -48,10 +62,14 @@ typedef struct nodo
     union
     {
         Expr* expr;
+        DeclVar decl_var;
     };
 } Nodo;
 
 Expr* libra_expr_lit(LibraValor valor);
+Expr* libra_expr_ident(char* nome);
 Expr* libra_expr_bin(Expr* esq, TokenTipo op, Expr* dir);
+Nodo libra_decl_var(char* ident, Expr* expr);
 void libra_exibir_expr(Expr expr);
+
 #endif // L_ARVORE_H

@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include "libra.h"
 
-#define CAPACIDADE_INICIAL_TOKENS 10
+#define CAPACIDADE_INICIAL_TOKENS 1000
+#define CAPACIDADE_INICIAL_PROG 500 * sizeof(int)
 
 static Token* gerar_tokens(const char* codigo, size_t* saida_quantidade);
 static Nodo* gerar_nodos(const Token* tokens, size_t* saida_quantidade);
-static int* gerar_instrucoes_vm(const Nodo* nodos, size_t n_qtd, size_t* saida_quantidade);
-static void libra_liberar_expr(Expr* expr);
+static int* gerar_bytecode(const Nodo* nodos, size_t* saida_quantidade);
+static void liberar_expr(Expr* expr);
+static void liberar_tudo(Token* tokens, Nodo* nodos, int* bytecode); // lá ele
 
 void libra_compilar(const char* codigo, const char* arquivo_saida) {
     size_t t_qtd;
@@ -17,35 +19,26 @@ void libra_compilar(const char* codigo, const char* arquivo_saida) {
     Nodo* nodos = gerar_nodos(tokens, &n_qtd);
 
     size_t i_qtd;
-    int* instrucoes = gerar_instrucoes_vm(nodos, n_qtd, &i_qtd);
+    int* bytecode = gerar_bytecode(nodos, &i_qtd);
 
-    // Salvar as instruções no arquivo de saída
-    libra_vm_salvar_bytecode(arquivo_saida, instrucoes, i_qtd);
+    libra_vm_salvar_bytecode(arquivo_saida, bytecode, i_qtd);
 
-    // Limpar memória alocada
-    for (size_t i = 0; i < n_qtd; i++) {
-        if (nodos[i].tipo == NODO_EXPR) {
-            Expr* expr = nodos[i].expr;
-            libra_liberar_expr(expr);
-        }
-    }
-
-    libra_liberar(tokens);
-    libra_liberar(nodos);
+    liberar_tudo(tokens, nodos, bytecode);
 }
 
 void libra_carregar(const char* arquivo_entrada) {
     size_t tam_cod;
-    int* codigo = libra_vm_carregar_bytecode(arquivo_entrada, &tam_cod);
+    int* bytecode = libra_vm_carregar_bytecode(arquivo_entrada, &tam_cod);
 
     LibraVM vm;
     libra_vm_iniciar(&vm, 1000);
-    libra_vm_carregar_prog(&vm, codigo, tam_cod);
+    libra_vm_carregar_prog(&vm, bytecode, tam_cod);
     libra_vm_executar(&vm);
-    printf("%d\n", libra_vm_topo_pilha(&vm));
+    if(1)
+        printf("%d\n", libra_vm_topo_pilha(&vm));
 
     libra_vm_limpar(&vm);
-    libra_liberar(codigo);
+    libra_liberar(bytecode);
 }
 
 void libra_executar(const char* codigo)
@@ -57,43 +50,50 @@ void libra_executar(const char* codigo)
     Nodo* nodos = gerar_nodos(tokens, &n_qtd);
     
     size_t i_qtd;
-    int* instrucoes = gerar_instrucoes_vm(nodos, n_qtd, &i_qtd);
+    int* bytecode = gerar_bytecode(nodos, &i_qtd);
 
     LibraVM vm;
     libra_vm_iniciar(&vm, 1000);
-    libra_vm_carregar_prog(&vm, instrucoes, i_qtd);
+    libra_vm_carregar_prog(&vm, bytecode, i_qtd);
     libra_vm_executar(&vm);
     printf("%d\n", libra_vm_topo_pilha(&vm));
 
     libra_vm_limpar(&vm);
 
-    for (size_t i = 0; i < n_qtd; i++)
-    {
-        if(nodos[i].tipo == NODO_EXPR)
-        {
-            Expr* expr = nodos[i].expr;
-            libra_liberar_expr(expr);
-        }
-    }
-
-    libra_liberar(tokens);
-    libra_liberar(nodos);
+    liberar_tudo(tokens, nodos, NULL); // VM já limpa o bytecode
 }
 
-static void libra_liberar_expr(Expr* expr)
+static void liberar_expr(Expr* expr)
 {
     if(expr->tipo == EXPR_BIN)
     {
-        libra_liberar_expr(expr->bin.esq);
-        libra_liberar_expr(expr->bin.dir);
+        liberar_expr(expr->bin.esq);
+        liberar_expr(expr->bin.dir);
     }
 
     libra_liberar(expr);
 }
 
+static void liberar_tudo(Token* tokens, Nodo* nodos, int* bytecode)
+{
+    // Limpar os nodos
+    for (size_t i = 0; ; i++) {
+        if(nodos[i].tipo == NODO_FINAL) break;
+        if (nodos[i].tipo == NODO_EXPR) {
+            Expr* expr = nodos[i].expr;
+            liberar_expr(expr);
+        }
+    }
+
+    libra_liberar(tokens);
+    libra_liberar(nodos);
+    libra_liberar(bytecode);
+}
+
 LibraValor libra_avaliar_expr(const Expr* expr)
 {
-    if (!expr) {
+    if (!expr)
+    {
         libra_erro("Erro: ponteiro expr é NULL em libra_avaliar_expr");
     }
 
@@ -124,77 +124,39 @@ LibraValor libra_avaliar_expr(const Expr* expr)
     libra_erro("expr->tipo inválido");
 }
 
-static int* gerar_instrucoes_vm(const Nodo* nodos, size_t n_qtd, size_t* saida_quantidade)
+static int* gerar_bytecode(const Nodo* nodos, size_t* saida_quantidade)
 {
-    size_t capacidade = CAPACIDADE_INICIAL_TOKENS;
+    Compilador comp = { nodos, 0 };
+    size_t capacidade = CAPACIDADE_INICIAL_PROG;
     size_t quantidade = 0;
     int* instrucoes = libra_alocar(capacidade * sizeof(int));
-
-    for (size_t i = 0; i < n_qtd; i++)
+    
+    while (1)
     {
-        const Nodo* nodo = &nodos[i];
-        if (nodo->tipo == NODO_EXPR)
+        size_t tam_inst;
+        int* instrucao = libra_compilar_prox(&comp, &tam_inst);
+        
+        if (*instrucao == 0) // Verifica se chegou ao final da compilação
         {
-            Expr* expr = nodo->expr;
-            if (expr->tipo == EXPR_LIT)
-            {
-                // Instrução de empilhar o valor literal
-                if (quantidade + 2 >= capacidade) // Precisamos de dois elementos: OP e valor
-                {
-                    capacidade *= 2;
-                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
-                }
-
-                instrucoes[quantidade++] = OP_EMPILHAR;  // Tipo de operação
-                instrucoes[quantidade++] = expr->lit.valor.i32; // Valor da literal
-            }
-            else if (expr->tipo == EXPR_BIN)
-            {
-                // Gerar instruções para expressões binárias
-                // Empilhar operando esquerdo
-                int esq_valor = libra_avaliar_expr(expr->bin.esq).i32;
-                if (quantidade + 2 >= capacidade)
-                {
-                    capacidade *= 2;
-                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
-                }
-                instrucoes[quantidade++] = OP_EMPILHAR;
-                instrucoes[quantidade++] = esq_valor;
-
-                // Empilhar operando direito
-                int dir_valor = libra_avaliar_expr(expr->bin.dir).i32;
-                if (quantidade + 2 >= capacidade)
-                {
-                    capacidade *= 2;
-                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
-                }
-                instrucoes[quantidade++] = OP_EMPILHAR;
-                instrucoes[quantidade++] = dir_valor;
-
-                // Instrução de operação binária
-                int op;
-                switch (expr->bin.op)
-                {
-                    case TOKEN_OP_SOMA: op = OP_SOMAR; break;
-                    case TOKEN_OP_SUB: op = OP_SUBTRAIR; break;
-                    case TOKEN_OP_MUL: op = OP_MULTIPLICAR; break;
-                    //case TOKEN_OP_DIV: op = OP_DIVIDIR; break;
-                    default: continue;  // Ignora operações desconhecidas
-                }
-
-                if (quantidade + 1 >= capacidade)
-                {
-                    capacidade *= 2;
-                    instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
-                }
-                instrucoes[quantidade++] = op;
-            }
+            break;
         }
-    }
 
+        // Redimensiona o array de instruções caso necessário
+        if (quantidade + tam_inst > capacidade)
+        {
+            capacidade *= 2; // Dobra a capacidade
+            instrucoes = libra_realocar(instrucoes, capacidade * sizeof(int));
+        }
+
+        // Copia a nova instrução para o array principal
+        libra_copiar_mem(&instrucoes[quantidade], instrucao, tam_inst * sizeof(int));
+        quantidade += (tam_inst/sizeof(int));
+    }
+    
     *saida_quantidade = quantidade;
     return instrucoes;
 }
+
 
 static Nodo* gerar_nodos(const Token* tokens, size_t* saida_quantidade)
 {

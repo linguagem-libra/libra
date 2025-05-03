@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "arvore.h"
 #include "memoria.h"
+#include "erro.h"
 
 static Token prox(Parser* parser)
 {
@@ -18,6 +19,16 @@ static Token passar(Parser* parser)
 static int fim_arq(Parser* parser)
 {
     return prox(parser).tipo == TOKEN_FIM_ARQ;
+}
+
+static Token consumir(Parser* parser, TokenTipo tipo)
+{
+    if(prox(parser).tipo != tipo)
+    {
+        libra_erro("Tipo inesperado");
+    }
+
+    return passar(parser);
 }
 
 static Expr* parse_expr_lit(Parser* parser)
@@ -63,8 +74,25 @@ static Expr* parse_expr(Parser* parser, int prec_min)
     return esq;
 }
 
+Nodo parse_decl_var(Parser* parser)
+{
+    consumir(parser, TOKEN_VAR);
+    Token tokenIdent = consumir(parser, TOKEN_IDENT);
+    consumir(parser, TOKEN_OP_ATRIB);
+    Expr* expr = parse_expr(parser, 0);
+
+    return libra_decl_var(tokenIdent.valor.ident, expr);
+}
+
 Nodo parser_proximo_nodo(Parser* parser)
 {
     if(prox(parser).tipo == TOKEN_FIM_ARQ) return (Nodo) { .tipo = NODO_FINAL };
+
+    Token atual = prox(parser);
+    switch (atual.tipo)
+    {
+    case TOKEN_VAR: return parse_decl_var(parser);
+    }
+
     return (Nodo) {.tipo = NODO_EXPR, .expr = parse_expr(parser, 0)};
 }
