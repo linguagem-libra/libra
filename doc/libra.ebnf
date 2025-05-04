@@ -1,0 +1,28 @@
+programa                ::= instrucao*
+
+instrucao               ::= inst_decl_var
+                          | expr
+
+inst_decl_var           ::= "var" ident "=" expr
+
+expr                    ::= expr_lit | expr_var | expr_bin
+
+expr_lit                ::= int
+
+expr_var                ::= ident
+
+expr_bin                ::= expr op_bin expr
+
+op_bin                  ::= "+" | "-" | "*" | "/" | "="
+
+ident                   ::= letra (letra | digito | "_")*
+
+int                     ::= digito+
+
+letra                   ::= "a"..."z" | "A"..."Z"
+
+digito                  ::= "0"..."9"
+
+caractere               ::= qualquer caractere visível exceto "\"" e "\\"
+
+escape                  ::= "\\" ( "\"" | "\\" | "n" | "t" | "r" )
